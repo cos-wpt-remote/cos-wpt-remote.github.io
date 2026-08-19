@@ -1,0 +1,39 @@
+# This repository exists only to give tomayac/cos-wpt a second origin, which its
+# cross-origin tests need. It holds no copy of the site: every run publishes
+# the source repository as it stands.
+name: Publish the cos-wpt site
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '23 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: tomayac/cos-wpt
+      - name: Drop the source repository's own workflows and tooling
+        run: rm -rf .github tools
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+      - id: deployment
+        uses: actions/deploy-pages@v4
