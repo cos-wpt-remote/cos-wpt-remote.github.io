@@ -37,3 +37,25 @@ jobs:
           path: .
       - id: deployment
         uses: actions/deploy-pages@v4
+
+  # GitHub disables a scheduled workflow after 60 days without activity in its
+  # repository, and this repository never changes on its own. An empty commit
+  # once the newest one is 30 days old keeps the hourly publish running.
+  keepalive:
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Commit if this repository has been quiet for 30 days
+        run: |
+          age=$(( $(date +%s) - $(git log -1 --format=%ct) ))
+          if [ "$age" -lt $(( 30 * 24 * 60 * 60 )) ]; then
+            echo "The newest commit is $(( age / 86400 )) days old; nothing to do."
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit --allow-empty -m 'Keep the scheduled publish workflow active'
+          git push
